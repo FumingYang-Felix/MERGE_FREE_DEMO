@@ -345,7 +345,49 @@ function exportDecisions() {
     URL.revokeObjectURL(url);
 }
 
+// ──────────────────────────── auth warmup ───────────────────────────
+// Build a minimal minnie65_public state and open it in spelunker.
+// Spelunker will try to fetch the segmentation source via middleauth
+// and prompt for CAVE sign-in.  Once authenticated the cookie is set
+// on cave-explorer.org and our embedded iframe inherits it.
+function openCaveWarmup() {
+    const state = {
+        dimensions: { x: [4e-9, "m"], y: [4e-9, "m"], z: [4e-8, "m"] },
+        crossSectionScale: 1.0,
+        projectionScale: 50000,
+        layers: [
+            {
+                type: "image",
+                source: ("precomputed://https://bossdb-open-data."
+                         + "s3.amazonaws.com/iarpa_microns/minnie/"
+                         + "minnie65/em"),
+                tab: "source",
+                name: "imagery",
+            },
+            {
+                type: "segmentation",
+                source: [
+                    ("graphene://middleauth+https://minnie.microns-"
+                     + "daf.com/segmentation/table/minnie65_public"),
+                    ("precomputed://middleauth+https://minnie.microns-"
+                     + "daf.com/skeletoncache/api/v1/minnie65_public/"
+                     + "precomputed/skeleton/"),
+                ],
+                tab: "source",
+                name: "segmentation",
+            },
+        ],
+        selectedLayer: { layer: "segmentation", visible: true },
+        layout: "xy-3d",
+    };
+    const url = SPELUNKER + "#!" + encodeURIComponent(
+        JSON.stringify(state));
+    window.open(url, "_blank", "noopener");
+}
+
 // ──────────────────────────── wiring ────────────────────────────────
+const _warmupBtn = $("btn-warmup");
+if (_warmupBtn) _warmupBtn.addEventListener("click", openCaveWarmup);
 $("btn-import").addEventListener("click", () => importInput.click());
 importInput.addEventListener("change", (e) => {
     const f = e.target.files[0];

@@ -104,3 +104,9 @@ main#right { display: grid; grid-template-rows: 1fr auto; height: 100%; }
     background: #333; padding: 1px 5px; border-radius: 3px;
     border: 1px solid #555; font-size: 11px; font-family: monospace;
 }
+#welcome-overlay .link-btn {
+    background: #2a4a7a; color: #fff; border: 1px solid #5577aa;
+    padding: 3px 9px; font-size: 12px; cursor: pointer;
+    border-radius: 4px; font-family: inherit;
+}
+#welcome-overlay .link-btn:hover { background: #3a5a8a; }
