@@ -5,8 +5,9 @@
 // click rebuild a spelunker URL with that window's centre + per-
 // cluster token annotations.  Decisions go to localStorage keyed by
 // (latest_root, idx) with two sub-fields:
-//   merge    — yes/no/skip/unsure  ("is this actually a real merge?")
-//   affinity — yes/no/skip          ("did spectral cut group correctly?")
+//   merge — yes/no/skip/unsure  ("is this actually a real merge?")
+//   split — yes/no/skip          ("does the spectral cut split off
+//                                  at least one merge error?")
 
 // ──────────────────────────── constants ─────────────────────────────
 const SPELUNKER = "https://spelunker.cave-explorer.org/";
@@ -28,7 +29,7 @@ const importDecisionsInput = $("import-decisions-input");
 const winList = $("window-list");
 const iframe = $("ng-iframe");
 const mergeBtns = document.querySelectorAll("#merge-buttons button");
-const affinityBtns = document.querySelectorAll("#affinity-buttons button");
+const splitBtns = document.querySelectorAll("#split-buttons button");
 const tabBtns = document.querySelectorAll("#tab-toggle button");
 const notesInput = $("cur-notes");
 const hideDecided = $("hide-decided");
@@ -54,10 +55,16 @@ function getDecision(root, idx) {
 function setDecisionField(root, idx, field, value) {
     const all = loadDecisions(root);
     const cur = (all[idx] && typeof all[idx] === "object") ? all[idx] : {};
-    // Migrate legacy v1 entries: {verdict, notes, ts} → {merge, ...}
+    // Migrate legacy entries:
+    //   v1: {verdict, notes, ts} → {merge: verdict, ...}
+    //   v2 (intermediate): affinity → split
     if (cur.verdict && !cur.merge) {
         cur.merge = cur.verdict;
         delete cur.verdict;
+    }
+    if (cur.affinity && !cur.split) {
+        cur.split = cur.affinity;
+        delete cur.affinity;
     }
     cur[field] = value;
     cur.ts = new Date().toISOString();
@@ -65,7 +72,7 @@ function setDecisionField(root, idx, field, value) {
     saveDecisions(root, all);
 }
 function isDecided(d) {
-    return !!(d && (d.merge || d.affinity));
+    return !!(d && (d.merge || d.split || d.affinity));
 }
 
 // ──────────────────────────── spelunker state builder ───────────────
@@ -235,11 +242,12 @@ function renderWindows() {
             tag.textContent = mergeV.toUpperCase();
             row.appendChild(tag);
         }
-        if (d.affinity) {
+        const splitV = d.split || d.affinity;  // affinity is legacy
+        if (splitV) {
             const tag2 = document.createElement("span");
             tag2.className = "verdict-tag affinity-tag";
-            tag2.textContent = "A:" + d.affinity[0].toUpperCase();
-            tag2.title = "Affinity: " + d.affinity;
+            tag2.textContent = "S:" + splitV[0].toUpperCase();
+            tag2.title = "Split: " + splitV;
             row.appendChild(tag2);
         }
         row.addEventListener("click", () => selectWindow(w.idx));
@@ -274,12 +282,24 @@ function selectWindow(idx) {
     // Reflect existing decision
     const root = BUNDLE.neuron.latest_root_id;
     const d = loadDecisions(root)[idx] || {};
-    const mergeV = d.merge || d.verdict;  // verdict is legacy
+    const mergeV = d.merge || d.verdict;     // verdict is legacy
+    const splitV = d.split || d.affinity;    // affinity is legacy
     notesInput.value = d.notes || "";
     mergeBtns.forEach(b =>
         b.classList.toggle("active", b.dataset.v === mergeV));
-    affinityBtns.forEach(b =>
-        b.classList.toggle("active", b.dataset.v === d.affinity));
+    splitBtns.forEach(b =>
+        b.classList.toggle("active", b.dataset.v === splitV));
+
+    // Scroll the selected row into the centre of the visible list,
+    // even if the panel was resized down to a few rows tall.
+    const sel = winList.querySelector(".win-row.selected");
+    if (sel) {
+        try {
+            sel.scrollIntoView({ block: "center", behavior: "smooth" });
+        } catch (_e) {
+            sel.scrollIntoView();
+        }
+    }
 }
 
 // ──────────────────────────── verdict + nav ─────────────────────────
@@ -295,15 +315,15 @@ function applyMerge(verdict) {
         b.classList.toggle("active", b.dataset.v === verdict));
     renderWindows();
 }
-function applyAffinity(verdict) {
+function applySplit(verdict) {
     if (!BUNDLE || CURRENT_IDX == null) return;
     setDecisionField(BUNDLE.neuron.latest_root_id, CURRENT_IDX,
-                     "affinity", verdict);
+                     "split", verdict);
     if (notesInput.value) {
         setDecisionField(BUNDLE.neuron.latest_root_id, CURRENT_IDX,
                          "notes", notesInput.value);
     }
-    affinityBtns.forEach(b =>
+    splitBtns.forEach(b =>
         b.classList.toggle("active", b.dataset.v === verdict));
     renderWindows();
 }
@@ -397,11 +417,17 @@ function importDecisionsFromText(text) {
         for (const k of Object.keys(entries)) {
             const v = entries[k];
             if (v && typeof v === "object" && (v.merge || v.verdict
-                                                || v.affinity)) {
-                // Normalise legacy "verdict" → "merge"
+                                                || v.split || v.affinity)) {
+                // Normalise legacy:
+                //   "verdict" → "merge"
+                //   "affinity" → "split"
                 if (v.verdict && !v.merge) {
                     v.merge = v.verdict;
                     delete v.verdict;
+                }
+                if (v.affinity && !v.split) {
+                    v.split = v.affinity;
+                    delete v.affinity;
                 }
                 cur[k] = v;
                 n++;
@@ -506,8 +532,8 @@ hideDecided.addEventListener("change", renderWindows);
 
 mergeBtns.forEach(b =>
     b.addEventListener("click", () => applyMerge(b.dataset.v)));
-affinityBtns.forEach(b =>
-    b.addEventListener("click", () => applyAffinity(b.dataset.v)));
+splitBtns.forEach(b =>
+    b.addEventListener("click", () => applySplit(b.dataset.v)));
 nextBtn.addEventListener("click", goNextUndecided);
 
 let _notesT = null;
@@ -529,10 +555,10 @@ document.addEventListener("keydown", (e) => {
     else if (k === "n") applyMerge("no");
     else if (k === "s") applyMerge("skip");
     else if (k === "u") applyMerge("unsure");
-    // Affinity verdict
-    else if (k === "1") applyAffinity("yes");
-    else if (k === "2") applyAffinity("no");
-    else if (k === "3") applyAffinity("skip");
+    // Split verdict
+    else if (k === "1") applySplit("yes");
+    else if (k === "2") applySplit("no");
+    else if (k === "3") applySplit("skip");
     // Navigation
     else if (k === "arrowright" || k === "enter") goNextUndecided();
     else if (k === "arrowdown" || k === "j") jumpRow(+1);
