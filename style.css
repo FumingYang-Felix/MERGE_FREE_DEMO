@@ -106,7 +106,19 @@ main#right { display: grid; grid-template-rows: 1fr auto; height: 100%; }
 }
 #welcome-overlay .link-btn {
     background: #2a4a7a; color: #fff; border: 1px solid #5577aa;
-    padding: 3px 9px; font-size: 12px; cursor: pointer;
+    padding: 4px 10px; font-size: 12px; cursor: pointer;
     border-radius: 4px; font-family: inherit;
 }
 #welcome-overlay .link-btn:hover { background: #3a5a8a; }
+#welcome-overlay .link-btn.primary {
+    background: #2a8a3a; border-color: #4caf50; font-weight: 600;
+    padding: 6px 14px; font-size: 13px;
+}
+#welcome-overlay .link-btn.primary:hover { background: #3aaa4a; }
+#welcome-overlay .welcome-steps {
+    padding-left: 22px; margin: 12px 0 14px;
+}
+#welcome-overlay .welcome-steps li { margin: 10px 0; line-height: 1.55; }
+#welcome-overlay .dim {
+    color: #999; font-size: 12px; line-height: 1.5; margin: 8px 0 0;
+}

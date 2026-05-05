@@ -389,6 +389,12 @@ function openCaveWarmup() {
 const _warmupBtn = $("btn-warmup");
 if (_warmupBtn) _warmupBtn.addEventListener("click", openCaveWarmup);
 $("btn-import").addEventListener("click", () => importInput.click());
+const _welImport = $("btn-welcome-import");
+if (_welImport) _welImport.addEventListener(
+    "click", () => importInput.click());
+const _welImportDec = $("btn-welcome-import-decisions");
+if (_welImportDec) _welImportDec.addEventListener(
+    "click", () => importDecisionsInput.click());
 importInput.addEventListener("change", (e) => {
     const f = e.target.files[0];
     if (!f) return;

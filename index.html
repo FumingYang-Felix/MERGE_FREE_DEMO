@@ -52,21 +52,35 @@
   <div id="welcome-overlay">
     <div class="card">
       <h2>Merge review</h2>
-      <p>Drop a bundle JSON to start.  Decisions are stored locally
-        in your browser (localStorage); click <b>Export decisions</b>
-        to download them as a JSON file when you're done.</p>
-      <p>Spelunker (the embedded EM viewer) auths with your CAVE
-        cookie.  Click <button id="btn-warmup" class="link-btn">
-        Sign in to CAVE</button> to open a minnie65 warmup view in
-        a new tab — Spelunker will prompt for sign-in there; once
-        you're in, return to this tab and import your bundle.</p>
-      <p><b>Keyboard shortcuts</b> (when not typing in notes):</p>
-      <ul>
-        <li><kbd>Y</kbd> / <kbd>N</kbd> / <kbd>S</kbd> / <kbd>U</kbd>
-          — set verdict</li>
-        <li><kbd>↑</kbd>/<kbd>↓</kbd> or <kbd>j</kbd>/<kbd>k</kbd>
-          — navigate</li>
-      </ul>
+      <ol class="welcome-steps">
+        <li>
+          <button id="btn-warmup" class="link-btn">Sign in to CAVE</button>
+          — opens a minnie65 view in a new tab; sign in there so
+          Spelunker can use your cookie inside the embedded viewer.
+        </li>
+        <li>
+          <button id="btn-welcome-import" class="link-btn primary">
+            ↑ Import bundle JSON
+          </button>
+          — pick the per-neuron JSON your team lead sent you.  This
+          dismisses this welcome screen and starts the review.
+        </li>
+        <li>
+          (Optional) <button id="btn-welcome-import-decisions"
+          class="link-btn">↑ Import prior decisions</button> if you
+          had reviewed this neuron earlier and want to resume.
+        </li>
+      </ol>
+      <p class="dim">
+        Decisions live in your browser's localStorage.  Click
+        <b>Export decisions</b> in the header when you're done to
+        download them as a JSON file.
+      </p>
+      <p class="dim">
+        Keyboard: <kbd>Y</kbd>/<kbd>N</kbd>/<kbd>S</kbd>/<kbd>U</kbd>
+        — verdict; <kbd>↑</kbd>/<kbd>↓</kbd> or <kbd>j</kbd>/<kbd>k</kbd>
+        — navigate (when not typing notes).
+      </p>
     </div>
   </div>
 
