@@ -135,6 +135,10 @@ function buildSpelunkerUrl(window_) {
                 desc: `T${i} cluster=${lab}`,
             });
         }
+        // Use ELLIPSOID annotations (200 nm radius spheres ≈ 50 voxels
+        // xy / 5 voxels z) so the cluster overlay reads as bigger
+        // soft blobs on top of the EM image, with reduced fill
+        // opacity so the underlying segmentation remains visible.
         Object.keys(byCluster).sort((a, b) => Number(a) - Number(b))
               .forEach((lab) => {
             const color = CLUSTER_COLORS[Number(lab) % CLUSTER_COLORS.length];
@@ -143,9 +147,11 @@ function buildSpelunkerUrl(window_) {
                 source: "local://annotations",
                 tab: "annotations",
                 annotationColor: color,
+                annotationFillOpacity: 0.35,
                 annotations: byCluster[lab].map((a, i) => ({
-                    point: a.pt,
-                    type: "point",
+                    type: "ellipsoid",
+                    center: a.pt,
+                    radii: [50, 50, 5],
                     id: `c${lab}_t${i}`,
                     description: a.desc,
                 })),
@@ -523,6 +529,91 @@ document.addEventListener("keydown", (e) => {
     else if (k === "arrowright" || k === "enter") goNextUndecided();
     else if (k === "arrowdown" || k === "j") jumpRow(+1);
     else if (k === "arrowup"   || k === "k") jumpRow(-1);
+});
+
+// ──────────────────────────── floating-panel chrome ─────────────────
+// Drag by header.  We pin the panel to absolute left/top during drag
+// (cancelling the right/bottom anchor) so it follows the mouse from
+// any starting corner.  iframe pointer-events get suppressed while
+// dragging so the mouse doesn't get captured by spelunker.
+function makeDraggable(panelId) {
+    const panel = $(panelId);
+    if (!panel) return;
+    const header = panel.querySelector("[data-drag-target='" + panelId + "']");
+    if (!header) return;
+    let dragging = false, ox = 0, oy = 0;
+    header.addEventListener("mousedown", (e) => {
+        // Don't start drag when clicking nested buttons.
+        if (e.target.closest("button")) return;
+        dragging = true;
+        const r = panel.getBoundingClientRect();
+        ox = e.clientX - r.left;
+        oy = e.clientY - r.top;
+        panel.style.right = "auto";
+        panel.style.bottom = "auto";
+        panel.style.left = r.left + "px";
+        panel.style.top = r.top + "px";
+        // Block iframe from eating mouse moves while we drag.
+        iframe.style.pointerEvents = "none";
+        e.preventDefault();
+    });
+    document.addEventListener("mousemove", (e) => {
+        if (!dragging) return;
+        const w = panel.offsetWidth, h = panel.offsetHeight;
+        let x = e.clientX - ox, y = e.clientY - oy;
+        x = Math.max(2, Math.min(window.innerWidth - w - 2, x));
+        y = Math.max(2, Math.min(window.innerHeight - h - 2, y));
+        panel.style.left = x + "px";
+        panel.style.top = y + "px";
+    });
+    document.addEventListener("mouseup", () => {
+        if (dragging) {
+            dragging = false;
+            iframe.style.pointerEvents = "";
+        }
+    });
+}
+makeDraggable("left-panel");
+makeDraggable("decision-panel");
+
+// While the user drags the panel's bottom-right resize handle, the
+// iframe also tries to grab pointer events; mute it during resize.
+[document.getElementById("left-panel"),
+ document.getElementById("decision-panel")].forEach((p) => {
+    if (!p) return;
+    p.addEventListener("mousedown", (e) => {
+        const r = p.getBoundingClientRect();
+        // Bottom-right 16×16 region is where the CSS resize grip is.
+        if (e.clientX >= r.right - 16 && e.clientY >= r.bottom - 16) {
+            iframe.style.pointerEvents = "none";
+        }
+    });
+});
+document.addEventListener("mouseup",
+    () => { iframe.style.pointerEvents = ""; });
+
+// Minimize / Close handlers (also re-open from the header buttons).
+document.querySelectorAll("[data-min-target]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+        const panel = $(btn.dataset.minTarget);
+        if (panel) panel.classList.toggle("collapsed");
+    });
+});
+document.querySelectorAll("[data-close-target]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+        const panel = $(btn.dataset.closeTarget);
+        if (panel) panel.classList.add("hidden");
+    });
+});
+$("btn-show-windows").addEventListener("click", () => {
+    const p = $("left-panel");
+    p.classList.remove("hidden");
+    p.classList.remove("collapsed");
+});
+$("btn-show-decision").addEventListener("click", () => {
+    const p = $("decision-panel");
+    p.classList.remove("hidden");
+    p.classList.remove("collapsed");
 });
 
 updateMeta();

@@ -10,14 +10,31 @@
     <span class="brand">Merge review</span>
     <input type="file" id="import-input" accept=".json" hidden>
     <input type="file" id="import-decisions-input" accept=".json" hidden>
-    <button id="btn-import">↑ Import bundle JSON</button>
-    <button id="btn-import-decisions">↑ Import prior decisions</button>
+    <button id="btn-import">↑ Import bundle</button>
+    <button id="btn-import-decisions">↑ Import decisions</button>
     <button id="btn-export">↓ Export decisions</button>
+    <button id="btn-show-windows" title="Re-open the windows panel"
+            class="panel-toggle">📋 Windows</button>
+    <button id="btn-show-decision" title="Re-open the decision panel"
+            class="panel-toggle">🗳 Decision</button>
     <span class="meta" id="bundle-meta">No bundle loaded.</span>
   </header>
 
-  <div id="app">
-    <aside id="left">
+  <!-- Spelunker iframe occupies the whole area beneath the header. -->
+  <iframe id="ng-iframe" src="about:blank"
+          referrerpolicy="no-referrer"></iframe>
+
+  <!-- Floating Windows panel (draggable + resizable) -->
+  <aside id="left-panel" class="floating-window">
+    <div class="panel-header" data-drag-target="left-panel">
+      <span class="grip">⠿</span>
+      <span class="title">Windows</span>
+      <button class="panel-min" data-min-target="left-panel"
+              title="Minimise (header only)">_</button>
+      <button class="panel-close" data-close-target="left-panel"
+              title="Hide (re-open from header)">×</button>
+    </div>
+    <div class="panel-body">
       <h3>Tab</h3>
       <div id="tab-toggle">
         <button data-tab="suspect" class="active">Suspects</button>
@@ -29,42 +46,43 @@
 
       <h3>Windows</h3>
       <div id="window-list"></div>
-    </aside>
+    </div>
+  </aside>
 
-    <main id="right">
-      <div id="iframe-wrap">
-        <iframe id="ng-iframe" src="about:blank"
-                referrerpolicy="no-referrer"></iframe>
-      </div>
-      <div id="row-controls">
-        <div class="rc-meta-row">
-          <span id="cur-meta">Pick a window from the list →</span>
-          <button id="btn-next" class="btn-next" title="Jump to next undecided suspect (→ / Enter)">
-            NEXT →
-          </button>
-        </div>
-        <div class="rc-decisions-row">
-          <div class="decision-group">
-            <span class="dg-label">Real merge?</span>
-            <div id="merge-buttons" class="dg-buttons">
-              <button data-v="yes"    class="v-yes">YES</button>
-              <button data-v="no"     class="v-no">NO</button>
-              <button data-v="skip"   class="v-skip">Skip</button>
-              <button data-v="unsure" class="v-unsure">Unsure</button>
-            </div>
-          </div>
-          <div class="decision-group">
-            <span class="dg-label">Affinity OK?</span>
-            <div id="affinity-buttons" class="dg-buttons">
-              <button data-v="yes"  class="v-yes">YES</button>
-              <button data-v="no"   class="v-no">NO</button>
-              <button data-v="skip" class="v-skip">Skip</button>
-            </div>
-          </div>
-          <input type="text" id="cur-notes" placeholder="notes (optional)">
+  <!-- Floating Decision panel (draggable + resizable) -->
+  <div id="decision-panel" class="floating-window">
+    <div class="panel-header" data-drag-target="decision-panel">
+      <span class="grip">⠿</span>
+      <span class="title" id="cur-meta">Pick a window from the list →</span>
+      <button id="btn-next" class="btn-next"
+              title="Jump to next undecided suspect (→ / Enter)">
+        NEXT →
+      </button>
+      <button class="panel-min" data-min-target="decision-panel"
+              title="Minimise">_</button>
+      <button class="panel-close" data-close-target="decision-panel"
+              title="Hide (re-open from header)">×</button>
+    </div>
+    <div class="panel-body">
+      <div class="decision-group">
+        <span class="dg-label">Real merge?</span>
+        <div id="merge-buttons" class="dg-buttons">
+          <button data-v="yes"    class="v-yes">YES</button>
+          <button data-v="no"     class="v-no">NO</button>
+          <button data-v="skip"   class="v-skip">Skip</button>
+          <button data-v="unsure" class="v-unsure">Unsure</button>
         </div>
       </div>
-    </main>
+      <div class="decision-group">
+        <span class="dg-label">Affinity OK?</span>
+        <div id="affinity-buttons" class="dg-buttons">
+          <button data-v="yes"  class="v-yes">YES</button>
+          <button data-v="no"   class="v-no">NO</button>
+          <button data-v="skip" class="v-skip">Skip</button>
+        </div>
+      </div>
+      <input type="text" id="cur-notes" placeholder="notes (optional)">
+    </div>
   </div>
 
   <div id="welcome-overlay">
@@ -89,11 +107,18 @@
         when you're done.
       </p>
       <p class="dim">
+        Both <b>Windows</b> and <b>Decision</b> panels float on top
+        of the EM viewer — drag the <b>⠿</b> grip in the header to
+        move them, drag the bottom-right corner to resize, click
+        <b>_</b> to collapse to header-only, or <b>×</b> to hide
+        (re-open from the header buttons).
+      </p>
+      <p class="dim">
         <b>Keyboard:</b>
         <kbd>Y</kbd>/<kbd>N</kbd>/<kbd>S</kbd>/<kbd>U</kbd>
         — Real merge?;
-        <kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd> — Affinity OK? (yes/no/skip);
-        <kbd>→</kbd> or <kbd>Enter</kbd> — next undecided;
+        <kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd> — Affinity OK?;
+        <kbd>→</kbd>/<kbd>Enter</kbd> — next undecided;
         <kbd>↑</kbd>/<kbd>↓</kbd> or <kbd>j</kbd>/<kbd>k</kbd> — navigate.
       </p>
     </div>

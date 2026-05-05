@@ -1,11 +1,15 @@
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; font-family: -apple-system, "Segoe UI",
-    Roboto, Helvetica, Arial, sans-serif; background: #111; color: #ddd; }
+    Roboto, Helvetica, Arial, sans-serif; background: #111; color: #ddd;
+    overflow: hidden; }
 
+/* ── Header ───────────────────────────────────────────────────────── */
 header {
     background: #222; color: #eee; padding: 8px 14px;
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 8px;
     border-bottom: 1px solid #333;
+    height: 41px; flex: 0 0 auto;
+    position: relative; z-index: 60;
 }
 header .brand { font-weight: 700; font-size: 14px; }
 header button {
@@ -14,38 +18,107 @@ header button {
     border-radius: 4px; font-family: inherit;
 }
 header button:hover { background: #3a5a8a; }
+header .panel-toggle { background: #333; border-color: #555; color: #ddd; }
+header .panel-toggle:hover { background: #444; }
 header .meta {
     margin-left: auto; color: #aaa; font-size: 12px;
     font-family: ui-monospace, Menlo, Consolas, monospace;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 50%;
 }
 
-#app {
-    display: grid; grid-template-columns: 320px 1fr;
-    height: calc(100vh - 41px);
+/* ── Spelunker iframe occupies the whole area below the header ───── */
+#ng-iframe {
+    position: fixed; left: 0; right: 0; top: 41px; bottom: 0;
+    width: 100%; height: calc(100vh - 41px);
+    border: none; background: #000;
 }
 
-aside#left {
-    overflow-y: auto; padding: 10px 12px; background: #181818;
-    border-right: 1px solid #333;
+/* ── Floating windows (Windows + Decision panels) ────────────────── */
+.floating-window {
+    position: fixed;
+    background: rgba(28, 28, 32, 0.97);
+    border: 1px solid #444;
+    border-radius: 6px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.55);
+    z-index: 50;
+    min-width: 260px; min-height: 80px;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    resize: both;
+    color: #ddd;
 }
-aside#left h3 { margin: 14px 0 6px; font-size: 12px;
-    color: #999; text-transform: uppercase; letter-spacing: .5px; }
-aside#left h3:first-child { margin-top: 0; }
+.floating-window.hidden { display: none; }
+.floating-window.collapsed {
+    resize: none; height: auto !important; min-height: 0;
+}
+.floating-window.collapsed .panel-body { display: none; }
+.floating-window.collapsed { border-radius: 6px; }
+
+.panel-header {
+    cursor: grab; user-select: none;
+    background: linear-gradient(180deg, #2c2f3a, #24262e);
+    padding: 7px 10px;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid #444;
+    flex: 0 0 auto;
+}
+.panel-header:active { cursor: grabbing; }
+.panel-header .grip {
+    color: #6088ff; font-size: 16px; cursor: grab;
+    line-height: 1; padding: 0 2px;
+}
+.panel-header .title {
+    flex: 1; font-size: 12px;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    color: #cfd2db; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
+}
+.panel-min, .panel-close {
+    background: #383b46; color: #ccc; border: 1px solid #555;
+    width: 22px; height: 22px; border-radius: 3px; cursor: pointer;
+    font-size: 12px; line-height: 1; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+}
+.panel-min:hover  { background: #4a4d58; }
+.panel-close:hover { background: #aa3333; border-color: #cc4444; }
+
+.panel-body {
+    flex: 1 1 auto; overflow: auto; padding: 10px 12px;
+}
+
+/* ── Default panel positions ─────────────────────────────────────── */
+#left-panel {
+    left: 12px; top: 56px;
+    width: 320px; height: calc(100vh - 80px);
+}
+#decision-panel {
+    right: 12px; bottom: 16px;
+    width: 540px; max-width: 96vw;
+}
+
+/* ── Left panel (windows list) interior ──────────────────────────── */
+#left-panel .panel-body h3 {
+    margin: 12px 0 6px; font-size: 11px;
+    color: #999; text-transform: uppercase; letter-spacing: .5px;
+}
+#left-panel .panel-body h3:first-child { margin-top: 0; }
 
 #tab-toggle { display: flex; gap: 4px; }
 #tab-toggle button {
     flex: 1; background: #222; color: #aaa; border: 1px solid #444;
     padding: 6px 4px; border-radius: 4px; font-size: 12px; cursor: pointer;
 }
-#tab-toggle button.active { background: #2a4a7a; color: #fff;
-    border-color: #5577aa; }
+#tab-toggle button.active {
+    background: #2a4a7a; color: #fff; border-color: #5577aa;
+}
 
 #window-list { font-size: 12px; }
 .win-row {
     padding: 6px 8px; border-bottom: 1px solid #2a2a2a; cursor: pointer;
     display: flex; align-items: center; gap: 6px;
 }
-.win-row:hover { background: #232323; }
+.win-row:hover { background: #232b3a; }
 .win-row.selected { background: #2a4a7a; color: #fff; }
 .win-row .idx { color: #aaf; font-family: monospace; min-width: 42px; }
 .win-row .prob { font-family: monospace; color: #fa6; min-width: 48px;
@@ -54,45 +127,30 @@ aside#left h3:first-child { margin-top: 0; }
     margin-left: auto; font-size: 10px; padding: 1px 5px;
     border-radius: 3px; font-weight: bold;
 }
-.win-row .verdict-tag.yes { background: #2a8a3a; color: #fff; }
-.win-row .verdict-tag.no  { background: #aa2a2a; color: #fff; }
+.win-row .verdict-tag.yes    { background: #2a8a3a; color: #fff; }
+.win-row .verdict-tag.no     { background: #aa2a2a; color: #fff; }
 .win-row .verdict-tag.skip   { background: #555; color: #ddd; }
 .win-row .verdict-tag.unsure { background: #aa8a2a; color: #fff; }
+.win-row .verdict-tag.affinity-tag {
+    background: transparent; color: #aaa; border: 1px solid #555;
+    margin-left: 4px;
+}
 .win-row.is-suspect .idx { font-weight: bold; }
 
-main#right { display: grid; grid-template-rows: 1fr auto; height: 100%; }
-#iframe-wrap { background: #000; position: relative; }
-#ng-iframe { width: 100%; height: 100%; border: none; }
-
-#row-controls {
-    background: #1c1c1c; padding: 8px 14px;
-    border-top: 1px solid #333;
-    display: flex; flex-direction: column; gap: 6px;
+/* ── Decision panel interior ─────────────────────────────────────── */
+#decision-panel .panel-body {
+    display: flex; flex-direction: column; gap: 8px;
 }
-.rc-meta-row {
-    display: flex; align-items: center; gap: 12px;
+.decision-group { display: flex; align-items: center; gap: 8px;
+    flex-wrap: wrap; }
+.dg-label {
+    font-size: 11px; color: #999; text-transform: uppercase;
+    letter-spacing: .5px; min-width: 92px;
 }
-#cur-meta { font-family: monospace; font-size: 12px; color: #bbb;
-    flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
-    white-space: nowrap; }
-.btn-next {
-    background: #2a4a7a; color: #fff; border: 1px solid #5577aa;
-    padding: 6px 14px; font-size: 13px; font-weight: 600;
-    cursor: pointer; border-radius: 4px;
-}
-.btn-next:hover { background: #3a5a8a; }
-.btn-next:disabled { background: #333; border-color: #444;
-    color: #777; cursor: not-allowed; }
-.rc-decisions-row {
-    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-}
-.decision-group { display: flex; align-items: center; gap: 6px; }
-.dg-label { font-size: 11px; color: #999; text-transform: uppercase;
-    letter-spacing: .5px; min-width: 80px; }
-.dg-buttons { display: flex; gap: 3px; }
+.dg-buttons { display: flex; gap: 3px; flex-wrap: wrap; }
 .dg-buttons button {
     background: #222; color: #ddd; border: 1px solid #444;
-    padding: 6px 10px; font-size: 12px; cursor: pointer;
+    padding: 6px 12px; font-size: 12px; cursor: pointer;
     border-radius: 4px; font-weight: 600;
 }
 .dg-buttons button:hover { background: #333; }
@@ -102,14 +160,17 @@ main#right { display: grid; grid-template-rows: 1fr auto; height: 100%; }
 .dg-buttons button.active.v-unsure { background: #aa8a2a; border-color: #cb6; color: #fff; }
 #cur-notes {
     background: #222; color: #eee; border: 1px solid #444;
-    padding: 6px; border-radius: 4px; font-family: inherit; font-size: 12px;
-    flex: 1; min-width: 200px;
+    padding: 6px; border-radius: 4px;
+    font-family: inherit; font-size: 12px;
 }
-.win-row .verdict-tag.affinity-tag {
-    background: transparent; color: #aaa; border: 1px solid #555;
-    margin-left: 4px;
+.btn-next {
+    background: #2a8a3a; color: #fff; border: 1px solid #4caf50;
+    padding: 4px 12px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border-radius: 4px;
 }
+.btn-next:hover { background: #3aaa4a; }
 
+/* ── Welcome overlay ─────────────────────────────────────────────── */
 #welcome-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.6);
     display: flex; align-items: center; justify-content: center;
@@ -117,8 +178,8 @@ main#right { display: grid; grid-template-rows: 1fr auto; height: 100%; }
 }
 #welcome-overlay.hidden { display: none; }
 #welcome-overlay .card {
-    background: #1f1f1f; color: #ddd; max-width: 540px;
-    padding: 24px 28px; border-radius: 8px;
+    background: #1f1f1f; color: #ddd; max-width: 600px;
+    padding: 22px 26px; border-radius: 8px;
     border: 1px solid #444; line-height: 1.55;
 }
 #welcome-overlay h2 { margin: 0 0 12px; }
@@ -126,6 +187,9 @@ main#right { display: grid; grid-template-rows: 1fr auto; height: 100%; }
 #welcome-overlay kbd {
     background: #333; padding: 1px 5px; border-radius: 3px;
     border: 1px solid #555; font-size: 11px; font-family: monospace;
+}
+#welcome-overlay .dim {
+    color: #999; font-size: 12px; line-height: 1.5; margin: 8px 0 0;
 }
 #welcome-overlay .link-btn {
     background: #2a4a7a; color: #fff; border: 1px solid #5577aa;
@@ -138,10 +202,3 @@ main#right { display: grid; grid-template-rows: 1fr auto; height: 100%; }
     padding: 6px 14px; font-size: 13px;
 }
 #welcome-overlay .link-btn.primary:hover { background: #3aaa4a; }
-#welcome-overlay .welcome-steps {
-    padding-left: 22px; margin: 12px 0 14px;
-}
-#welcome-overlay .welcome-steps li { margin: 10px 0; line-height: 1.55; }
-#welcome-overlay .dim {
-    color: #999; font-size: 12px; line-height: 1.5; margin: 8px 0 0;
-}
