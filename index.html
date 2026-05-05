@@ -37,14 +37,32 @@
                 referrerpolicy="no-referrer"></iframe>
       </div>
       <div id="row-controls">
-        <span id="cur-meta">Pick a window from the list →</span>
-        <div id="verdict-buttons">
-          <button data-v="yes"    class="v-yes">YES (real merge)</button>
-          <button data-v="no"     class="v-no">NO (false alarm)</button>
-          <button data-v="skip"   class="v-skip">Skip</button>
-          <button data-v="unsure" class="v-unsure">Unsure</button>
+        <div class="rc-meta-row">
+          <span id="cur-meta">Pick a window from the list →</span>
+          <button id="btn-next" class="btn-next" title="Jump to next undecided suspect (→ / Enter)">
+            NEXT →
+          </button>
         </div>
-        <input type="text" id="cur-notes" placeholder="notes (optional)">
+        <div class="rc-decisions-row">
+          <div class="decision-group">
+            <span class="dg-label">Real merge?</span>
+            <div id="merge-buttons" class="dg-buttons">
+              <button data-v="yes"    class="v-yes">YES</button>
+              <button data-v="no"     class="v-no">NO</button>
+              <button data-v="skip"   class="v-skip">Skip</button>
+              <button data-v="unsure" class="v-unsure">Unsure</button>
+            </div>
+          </div>
+          <div class="decision-group">
+            <span class="dg-label">Affinity OK?</span>
+            <div id="affinity-buttons" class="dg-buttons">
+              <button data-v="yes"  class="v-yes">YES</button>
+              <button data-v="no"   class="v-no">NO</button>
+              <button data-v="skip" class="v-skip">Skip</button>
+            </div>
+          </div>
+          <input type="text" id="cur-notes" placeholder="notes (optional)">
+        </div>
       </div>
     </main>
   </div>
@@ -52,34 +70,31 @@
   <div id="welcome-overlay">
     <div class="card">
       <h2>Merge review</h2>
-      <ol class="welcome-steps">
-        <li>
-          <button id="btn-warmup" class="link-btn">Sign in to CAVE</button>
-          — opens a minnie65 view in a new tab; sign in there so
-          Spelunker can use your cookie inside the embedded viewer.
-        </li>
-        <li>
-          <button id="btn-welcome-import" class="link-btn primary">
-            ↑ Import bundle JSON
-          </button>
-          — pick the per-neuron JSON your team lead sent you.  This
-          dismisses this welcome screen and starts the review.
-        </li>
-        <li>
-          (Optional) <button id="btn-welcome-import-decisions"
-          class="link-btn">↑ Import prior decisions</button> if you
-          had reviewed this neuron earlier and want to resume.
-        </li>
-      </ol>
-      <p class="dim">
-        Decisions live in your browser's localStorage.  Click
-        <b>Export decisions</b> in the header when you're done to
-        download them as a JSON file.
+      <p>
+        <button id="btn-welcome-import" class="link-btn primary">
+          ↑ Import bundle JSON
+        </button>
+        &nbsp; — pick the per-neuron JSON your team lead sent you to
+        start.  Optional:
+        <button id="btn-welcome-import-decisions" class="link-btn">
+          ↑ Import prior decisions
+        </button>
+        if you had reviewed this neuron earlier.
       </p>
       <p class="dim">
-        Keyboard: <kbd>Y</kbd>/<kbd>N</kbd>/<kbd>S</kbd>/<kbd>U</kbd>
-        — verdict; <kbd>↑</kbd>/<kbd>↓</kbd> or <kbd>j</kbd>/<kbd>k</kbd>
-        — navigate (when not typing notes).
+        Spelunker (the embedded viewer) auto-prompts you to sign in
+        to CAVE the first time it tries to load segmentation — no
+        separate login step needed.  Decisions live in your browser's
+        localStorage; click <b>Export decisions</b> in the header
+        when you're done.
+      </p>
+      <p class="dim">
+        <b>Keyboard:</b>
+        <kbd>Y</kbd>/<kbd>N</kbd>/<kbd>S</kbd>/<kbd>U</kbd>
+        — Real merge?;
+        <kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd> — Affinity OK? (yes/no/skip);
+        <kbd>→</kbd> or <kbd>Enter</kbd> — next undecided;
+        <kbd>↑</kbd>/<kbd>↓</kbd> or <kbd>j</kbd>/<kbd>k</kbd> — navigate.
       </p>
     </div>
   </div>
