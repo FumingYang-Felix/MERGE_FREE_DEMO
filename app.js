@@ -357,6 +357,14 @@ function importBundleFromText(text, source) {
         welcome.classList.add("hidden");
         renderWindows();
         updateMeta();
+        // Auto-select the first window in the visible list so the
+        // reviewer is dropped straight into the EM view instead of
+        // a blank iframe.
+        const firstRow = winList.querySelector(".win-row");
+        if (firstRow) {
+            const firstIdx = Number(firstRow.dataset.idx);
+            if (Number.isFinite(firstIdx)) selectWindow(firstIdx);
+        }
     } catch (e) {
         alert("Failed to parse bundle JSON: " + e.message);
     }

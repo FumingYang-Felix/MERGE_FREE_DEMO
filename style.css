@@ -90,7 +90,7 @@ header .meta {
 /* ── Default panel positions ─────────────────────────────────────── */
 #left-panel {
     left: 12px; top: 56px;
-    width: 320px; height: calc(50vh - 40px);
+    width: 320px; height: 33vh;
 }
 #decision-panel {
     right: 12px; bottom: 16px;
