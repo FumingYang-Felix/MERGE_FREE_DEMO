@@ -560,9 +560,17 @@ function makeDraggable(panelId) {
     document.addEventListener("mousemove", (e) => {
         if (!dragging) return;
         const w = panel.offsetWidth, h = panel.offsetHeight;
+        const HEADER_PX = 41;            // the page header height
+        const HEADER_MARGIN = 4;         // breathing room beneath it
         let x = e.clientX - ox, y = e.clientY - oy;
         x = Math.max(2, Math.min(window.innerWidth - w - 2, x));
-        y = Math.max(2, Math.min(window.innerHeight - h - 2, y));
+        // Top edge is clamped to BELOW the page header — otherwise
+        // the drag grip slides under the header bar and can't be
+        // grabbed back.  Bottom edge keeps a tiny strip of header
+        // visible so a too-tall panel still has a draggable handle.
+        const minY = HEADER_PX + HEADER_MARGIN;
+        const maxY = window.innerHeight - HEADER_PX - HEADER_MARGIN;
+        y = Math.max(minY, Math.min(maxY, y));
         panel.style.left = x + "px";
         panel.style.top = y + "px";
     });
