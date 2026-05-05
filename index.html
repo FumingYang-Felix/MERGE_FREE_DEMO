@@ -106,11 +106,16 @@
       </p>
       <p>
         Welcome.  This is a research demo of an auto-proofreading
-        pipeline developed by <b>Fuming Yang</b> and
-        <b>Sven Dorkenwald</b>.  The current module surfaces candidate
-        <b>merge errors</b> in a proofread connectomics neuron and
-        proposes a <b>split</b> for each one, derived from a learned
-        token-affinity model.
+        system developed by <b>Fuming Yang</b> and
+        <b>Sven Dorkenwald</b>.  Inference is performed end-to-end
+        on a complete neuron from the MICrONS dataset in a single
+        pass (~45 seconds).  Ground-truth merge regions are
+        pre-marked in a separate colour to aid comparison, but
+        please note that this annotation is <b>not exhaustive</b> —
+        regions outside the GT may still contain genuine merges, so
+        please cross-reference the underlying EM imagery and the
+        segmentation when making your judgement rather than relying
+        on the GT colour alone.
       </p>
       <p>
         Reviewers step through the suspect windows in the Decision
@@ -134,7 +139,7 @@
         one fragment, and <b>NO</b> if it would not yield a valid
         separation.  Decisions persist in your browser's local storage
         and can be downloaded as JSON via <b>Export decisions</b>
-        when you are finished.  Thank you for contributing.
+        when you are finished.  We greatly appreciate your contribution!
       </p>
       <p class="dim">
         <b>Keyboard:</b>
