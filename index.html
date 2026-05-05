@@ -54,6 +54,10 @@
     <div class="panel-header" data-drag-target="decision-panel">
       <span class="grip">⠿</span>
       <span class="title" id="cur-meta">Pick a window from the list →</span>
+      <button id="btn-back" class="btn-back"
+              title="Jump to previous undecided suspect (←)">
+        ← BACK
+      </button>
       <button id="btn-next" class="btn-next"
               title="Jump to next undecided suspect (→ / Enter)">
         NEXT →
@@ -92,26 +96,26 @@
         <button id="btn-welcome-import" class="link-btn primary">
           ↑ Import bundle JSON
         </button>
-        &nbsp; — pick the per-neuron JSON your team lead sent you to
-        start.  Optional:
+        &nbsp;Pick the per-neuron JSON your admin sent you to start.
+      </p>
+      <p>
         <button id="btn-welcome-import-decisions" class="link-btn">
           ↑ Import prior decisions
         </button>
-        if you had reviewed this neuron earlier.
+        &nbsp;if you had reviewed this neuron earlier.
       </p>
-      <p class="dim">
-        Spelunker (the embedded viewer) auto-prompts you to sign in
-        to CAVE the first time it tries to load segmentation — no
-        separate login step needed.  Decisions live in your browser's
-        localStorage; click <b>Export decisions</b> in the header
-        when you're done.
+      <p>
+        欢迎！这个是由 <b>Fuming.Y</b> 以及 <b>Sven.D</b> 开发的
+        Auto-proofreading 的测试 demo。这一版块的内容是检测
+        <b>Merge Error</b> 并给出 <b>split</b> 建议。USER 可以
+        go through 所有的 suspect windows，在 decision window 中
+        做出判断 — 这个位置是否是 merge error，以及模型是否可以
+        按照这个 split 建议正确地把它分开。
       </p>
-      <p class="dim">
-        Both <b>Windows</b> and <b>Decision</b> panels float on top
-        of the EM viewer — drag the <b>⠿</b> grip in the header to
-        move them, drag the bottom-right corner to resize, click
-        <b>_</b> to collapse to header-only, or <b>×</b> to hide
-        (re-open from the header buttons).
+      <p>
+        相同颜色的 dot 寓意为同组（操作思路与 CAVE 一致）— 只要
+        这一轮每一个窗口正确地分出了一组 fragment，<b>Split</b>
+        就是 <b>YES</b>；如果分错了就是 <b>NO</b>。Thanks!
       </p>
       <p class="dim">
         <b>Keyboard:</b>
@@ -120,6 +124,7 @@
         <kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd>
         — Split OK? (does this cut separate ≥1 merge error?);
         <kbd>→</kbd>/<kbd>Enter</kbd> — next undecided;
+        <kbd>←</kbd> — previous undecided;
         <kbd>↑</kbd>/<kbd>↓</kbd> or <kbd>j</kbd>/<kbd>k</kbd> — navigate.
       </p>
     </div>

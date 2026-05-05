@@ -169,6 +169,12 @@ header .meta {
     cursor: pointer; border-radius: 4px;
 }
 .btn-next:hover { background: #3aaa4a; }
+.btn-back {
+    background: #444a55; color: #ddd; border: 1px solid #666;
+    padding: 4px 12px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border-radius: 4px;
+}
+.btn-back:hover { background: #565c68; }
 
 /* ── Welcome overlay ─────────────────────────────────────────────── */
 #welcome-overlay {

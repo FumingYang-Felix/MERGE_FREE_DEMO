@@ -363,6 +363,31 @@ function goNextUndecided() {
     }
 }
 
+function goPrevUndecided() {
+    if (!BUNDLE) return;
+    const root = BUNDLE.neuron.latest_root_id;
+    const decisions = loadDecisions(root);
+    const visible = Array.from(winList.querySelectorAll(".win-row"))
+                         .map(r => Number(r.dataset.idx));
+    if (!visible.length) return;
+    const n = visible.length;
+    const startPos = visible.indexOf(CURRENT_IDX);
+    // Search backwards (wrapping) for the next undecided row.
+    for (let off = 1; off <= n; off++) {
+        const idx = visible[((startPos - off) % n + n) % n];
+        if (!isDecided(decisions[idx])) {
+            selectWindow(idx);
+            return;
+        }
+    }
+    // All decided — step one row up.
+    if (startPos > 0) {
+        selectWindow(visible[startPos - 1]);
+    } else {
+        selectWindow(visible[n - 1]);
+    }
+}
+
 // ──────────────────────────── import / export ───────────────────────
 function importBundleFromText(text, source) {
     try {
@@ -535,6 +560,8 @@ mergeBtns.forEach(b =>
 splitBtns.forEach(b =>
     b.addEventListener("click", () => applySplit(b.dataset.v)));
 nextBtn.addEventListener("click", goNextUndecided);
+const _backBtn = $("btn-back");
+if (_backBtn) _backBtn.addEventListener("click", goPrevUndecided);
 
 let _notesT = null;
 notesInput.addEventListener("input", () => {
@@ -561,6 +588,7 @@ document.addEventListener("keydown", (e) => {
     else if (k === "3") applySplit("skip");
     // Navigation
     else if (k === "arrowright" || k === "enter") goNextUndecided();
+    else if (k === "arrowleft") goPrevUndecided();
     else if (k === "arrowdown" || k === "j") jumpRow(+1);
     else if (k === "arrowup"   || k === "k") jumpRow(-1);
 });
