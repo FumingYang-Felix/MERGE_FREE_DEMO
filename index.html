@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Merge review (portable bundle)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <span class="brand">Merge review</span>
+    <input type="file" id="import-input" accept=".json" hidden>
+    <input type="file" id="import-decisions-input" accept=".json" hidden>
+    <button id="btn-import">↑ Import bundle JSON</button>
+    <button id="btn-import-decisions">↑ Import prior decisions</button>
+    <button id="btn-export">↓ Export decisions</button>
+    <span class="meta" id="bundle-meta">No bundle loaded.</span>
+  </header>
+
+  <div id="app">
+    <aside id="left">
+      <h3>Tab</h3>
+      <div id="tab-toggle">
+        <button data-tab="suspect" class="active">Suspects</button>
+        <button data-tab="all">All windows</button>
+      </div>
+
+      <h3>Filter</h3>
+      <label><input type="checkbox" id="hide-decided"> hide decided</label>
+
+      <h3>Windows</h3>
+      <div id="window-list"></div>
+    </aside>
+
+    <main id="right">
+      <div id="iframe-wrap">
+        <iframe id="ng-iframe" src="about:blank"
+                referrerpolicy="no-referrer"></iframe>
+      </div>
+      <div id="row-controls">
+        <span id="cur-meta">Pick a window from the list →</span>
+        <div id="verdict-buttons">
+          <button data-v="yes"    class="v-yes">YES (real merge)</button>
+          <button data-v="no"     class="v-no">NO (false alarm)</button>
+          <button data-v="skip"   class="v-skip">Skip</button>
+          <button data-v="unsure" class="v-unsure">Unsure</button>
+        </div>
+        <input type="text" id="cur-notes" placeholder="notes (optional)">
+      </div>
+    </main>
+  </div>
+
+  <div id="welcome-overlay">
+    <div class="card">
+      <h2>Merge review</h2>
+      <p>Drop a bundle JSON to start.  Decisions are stored locally
+        in your browser (localStorage); click <b>Export decisions</b>
+        to download them as a JSON file when you're done.</p>
+      <p>Spelunker (the embedded EM viewer) auths with your CAVE
+        cookie — log into <a href="https://global.daf-apis.com"
+        target="_blank">global.daf-apis.com</a> first if you haven't.</p>
+      <p><b>Keyboard shortcuts</b> (when not typing in notes):</p>
+      <ul>
+        <li><kbd>Y</kbd> / <kbd>N</kbd> / <kbd>S</kbd> / <kbd>U</kbd>
+          — set verdict</li>
+        <li><kbd>↑</kbd>/<kbd>↓</kbd> or <kbd>j</kbd>/<kbd>k</kbd>
+          — navigate</li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
