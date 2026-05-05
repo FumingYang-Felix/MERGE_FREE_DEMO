@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Merge review (portable bundle)</title>
+  <title>MERGER FREE — review demo</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
-    <span class="brand">Merge review</span>
+    <span class="brand">MERGER FREE</span>
     <input type="file" id="import-input" accept=".json" hidden>
     <input type="file" id="import-decisions-input" accept=".json" hidden>
     <button id="btn-import">↑ Import bundle</button>
@@ -91,7 +91,7 @@
 
   <div id="welcome-overlay">
     <div class="card">
-      <h2>Merge review</h2>
+      <h2>MERGER FREE</h2>
       <p>
         <button id="btn-welcome-import" class="link-btn primary">
           ↑ Import bundle JSON
@@ -105,17 +105,36 @@
         &nbsp;if you had reviewed this neuron earlier.
       </p>
       <p>
-        欢迎！这个是由 <b>Fuming.Y</b> 以及 <b>Sven.D</b> 开发的
-        Auto-proofreading 的测试 demo。这一版块的内容是检测
-        <b>Merge Error</b> 并给出 <b>split</b> 建议。USER 可以
-        go through 所有的 suspect windows，在 decision window 中
-        做出判断 — 这个位置是否是 merge error，以及模型是否可以
-        按照这个 split 建议正确地把它分开。
+        Welcome.  This is a research demo of an auto-proofreading
+        pipeline developed by <b>Fuming Yang</b> and
+        <b>Sven Dorkenwald</b>.  The current module surfaces candidate
+        <b>merge errors</b> in a proofread connectomics neuron and
+        proposes a <b>split</b> for each one, derived from a learned
+        token-affinity model.
       </p>
       <p>
-        相同颜色的 dot 寓意为同组（操作思路与 CAVE 一致）— 只要
-        这一轮每一个窗口正确地分出了一组 fragment，<b>Split</b>
-        就是 <b>YES</b>；如果分错了就是 <b>NO</b>。Thanks!
+        Reviewers step through the suspect windows in the Decision
+        panel and answer two questions per window:
+      </p>
+      <ol class="welcome-questions">
+        <li>
+          <b>Real merge?</b> — does this location actually contain a
+          merge error in the underlying segmentation?
+        </li>
+        <li>
+          <b>Split OK?</b> — does the proposed cut (visualised as
+          same-coloured token clusters in the EM viewer, following
+          CAVE's split convention) correctly separate at least one
+          of the merging fragments?
+        </li>
+      </ol>
+      <p>
+        Mark <b>Split = YES</b> whenever the recommended grouping —
+        if applied as a CAVE split — would correctly detach at least
+        one fragment, and <b>NO</b> if it would not yield a valid
+        separation.  Decisions persist in your browser's local storage
+        and can be downloaded as JSON via <b>Export decisions</b>
+        when you are finished.  Thank you for contributing.
       </p>
       <p class="dim">
         <b>Keyboard:</b>
