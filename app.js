@@ -13,9 +13,19 @@
 const SPELUNKER = "https://spelunker.cave-explorer.org/";
 const UM_TO_VOXEL_X = 250.0;     // 4 nm xy → 1 voxel = 4nm; 1 µm = 250 vox
 const UM_TO_VOXEL_Z = 25.0;      // 40 nm z → 1 voxel = 40nm; 1 µm = 25 vox
-// Cluster colour palette (max ~7 clusters in practice)
-const CLUSTER_COLORS = ["#ff2d55", "#2cb1ff", "#ffe119", "#3cb44b",
-                        "#9b59b6", "#ff8c00", "#42d4f4"];
+// Cluster colour palette (max ~7 clusters in practice).
+// Deliberately avoids red and blue families so the dots stay
+// distinguishable from the underlying segmentation meshes
+// (latest_root = #8888ff blue, old_root = #ff6688 pink).
+const CLUSTER_COLORS = [
+    "#ffe119",   // yellow
+    "#3cb44b",   // saturated green
+    "#ff8c00",   // orange
+    "#aa44ff",   // purple
+    "#bfef45",   // lime
+    "#00d0a0",   // teal
+    "#ee44ff",   // magenta-violet (distinct from the pinker old-root)
+];
 
 // ──────────────────────────── state ─────────────────────────────────
 let BUNDLE = null;        // the loaded JSON
