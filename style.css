@@ -158,6 +158,21 @@ header .meta {
 .dg-buttons button.active.v-no     { background: #aa2a2a; border-color: #c44; color: #fff; }
 .dg-buttons button.active.v-skip   { background: #555;    border-color: #777; }
 .dg-buttons button.active.v-unsure { background: #aa8a2a; border-color: #cb6; color: #fff; }
+/* SPLIT WHICH per-cluster button: background colour is set inline
+   (matches the EM annotation colour for that cluster); we only style
+   geometry + the muted/active states here.  Inactive = dim (low
+   opacity + grey border so the colour reads as "available but not
+   selected"); active = full colour with a bright outline. */
+.dg-buttons button.split-cluster-btn {
+    color: #000; padding: 6px 10px; min-width: 36px;
+    border: 2px solid #444; opacity: 0.45;
+    text-shadow: 0 0 2px rgba(255,255,255,0.6);
+}
+.dg-buttons button.split-cluster-btn:hover { opacity: 0.75; }
+.dg-buttons button.split-cluster-btn.active {
+    opacity: 1.0; border-color: #fff;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.35);
+}
 #cur-notes {
     background: #222; color: #eee; border: 1px solid #444;
     padding: 6px; border-radius: 4px;

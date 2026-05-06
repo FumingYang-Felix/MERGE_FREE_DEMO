@@ -39,7 +39,7 @@ const importDecisionsInput = $("import-decisions-input");
 const winList = $("window-list");
 const iframe = $("ng-iframe");
 const mergeBtns = document.querySelectorAll("#merge-buttons button");
-const splitBtns = document.querySelectorAll("#split-buttons button");
+const splitContainer = $("split-buttons");
 const tabBtns = document.querySelectorAll("#tab-toggle button");
 const notesInput = $("cur-notes");
 const hideDecided = $("hide-decided");
@@ -81,8 +81,43 @@ function setDecisionField(root, idx, field, value) {
     all[idx] = cur;
     saveDecisions(root, all);
 }
+function splitTagText(splitV) {
+    if (splitV === "skip") return { text: "S:S", title: "Split: skip" };
+    if (splitV === "yes")  return { text: "S:Y", title: "Split: yes (legacy)" };
+    if (splitV === "no")   return { text: "S:N", title: "Split: no (legacy)" };
+    if (Array.isArray(splitV) && splitV.length > 0) {
+        return {
+            text: "S:" + splitV.length + "c",
+            title: "Split clusters: " + splitV.join(","),
+        };
+    }
+    return null;
+}
+function isSplitDecided(splitV) {
+    // "skip" string — explicit skip
+    if (splitV === "skip") return true;
+    // legacy "yes"/"no" strings
+    if (splitV === "yes" || splitV === "no") return true;
+    // new schema: array of cluster ids; non-empty = decided
+    if (Array.isArray(splitV) && splitV.length > 0) return true;
+    return false;
+}
 function isDecided(d) {
-    return !!(d && (d.merge || d.split || d.affinity));
+    if (!d) return false;
+    if (d.merge || d.verdict) return true;
+    if (isSplitDecided(d.split)) return true;
+    if (d.affinity) return true;  // legacy
+    return false;
+}
+function clearDecisionField(root, idx, field) {
+    const all = loadDecisions(root);
+    const cur = (all[idx] && typeof all[idx] === "object")
+              ? all[idx] : null;
+    if (!cur) return;
+    delete cur[field];
+    cur.ts = new Date().toISOString();
+    all[idx] = cur;
+    saveDecisions(root, all);
 }
 
 // ──────────────────────────── spelunker state builder ───────────────
@@ -253,11 +288,12 @@ function renderWindows() {
             row.appendChild(tag);
         }
         const splitV = d.split || d.affinity;  // affinity is legacy
-        if (splitV) {
+        const splitTag = splitTagText(splitV);
+        if (splitTag) {
             const tag2 = document.createElement("span");
             tag2.className = "verdict-tag affinity-tag";
-            tag2.textContent = "S:" + splitV[0].toUpperCase();
-            tag2.title = "Split: " + splitV;
+            tag2.textContent = splitTag.text;
+            tag2.title = splitTag.title;
             row.appendChild(tag2);
         }
         row.addEventListener("click", () => selectWindow(w.idx));
@@ -293,12 +329,10 @@ function selectWindow(idx) {
     const root = BUNDLE.neuron.latest_root_id;
     const d = loadDecisions(root)[idx] || {};
     const mergeV = d.merge || d.verdict;     // verdict is legacy
-    const splitV = d.split || d.affinity;    // affinity is legacy
     notesInput.value = d.notes || "";
     mergeBtns.forEach(b =>
         b.classList.toggle("active", b.dataset.v === mergeV));
-    splitBtns.forEach(b =>
-        b.classList.toggle("active", b.dataset.v === splitV));
+    renderSplitButtons(w);
 
     // Scroll the selected row into the centre of the visible list,
     // even if the panel was resized down to a few rows tall.
@@ -325,17 +359,100 @@ function applyMerge(verdict) {
         b.classList.toggle("active", b.dataset.v === verdict));
     renderWindows();
 }
-function applySplit(verdict) {
-    if (!BUNDLE || CURRENT_IDX == null) return;
-    setDecisionField(BUNDLE.neuron.latest_root_id, CURRENT_IDX,
-                     "split", verdict);
-    if (notesInput.value) {
-        setDecisionField(BUNDLE.neuron.latest_root_id, CURRENT_IDX,
-                         "notes", notesInput.value);
+// Render the per-window cluster buttons inside #split-buttons.
+// One colored button per unique cluster label in this window's
+// tokens, plus a Skip button on the right.  All multi-toggleable.
+function renderSplitButtons(win) {
+    splitContainer.innerHTML = "";
+    if (!win || !win.tokens || !Array.isArray(win.tokens.labels)
+            || win.tokens.labels.length === 0) {
+        const span = document.createElement("span");
+        span.className = "dim";
+        span.textContent = "(no token labels for this window)";
+        splitContainer.appendChild(span);
+        return;
     }
-    splitBtns.forEach(b =>
-        b.classList.toggle("active", b.dataset.v === verdict));
+
+    const root = BUNDLE.neuron.latest_root_id;
+    const d = loadDecisions(root)[win.idx] || {};
+    let splitV = d.split;
+    // Legacy: string "yes"/"no" map to no-cluster-selection (the
+    // user has to re-decide under the new schema).
+    if (splitV === "yes" || splitV === "no") splitV = [];
+    const isSkip = splitV === "skip";
+    const selSet = (Array.isArray(splitV))
+                 ? new Set(splitV.map(String)) : new Set();
+
+    const uniqLabels = Array.from(new Set(win.tokens.labels))
+                            .map(Number)
+                            .sort((a, b) => a - b);
+    uniqLabels.forEach((lab) => {
+        const color = CLUSTER_COLORS[lab % CLUSTER_COLORS.length];
+        const btn = document.createElement("button");
+        btn.className = "split-cluster-btn"
+                       + (selSet.has(String(lab)) ? " active" : "");
+        btn.dataset.cluster = String(lab);
+        btn.style.background = color;
+        btn.style.borderColor = color;
+        btn.title = "Split off cluster " + lab;
+        btn.textContent = "C" + lab;
+        btn.addEventListener("click", () => toggleSplitCluster(lab));
+        splitContainer.appendChild(btn);
+    });
+
+    const skipBtn = document.createElement("button");
+    skipBtn.className = "v-skip" + (isSkip ? " active" : "");
+    skipBtn.dataset.v = "skip";
+    skipBtn.textContent = "Skip";
+    skipBtn.title = "Defer this window";
+    skipBtn.addEventListener("click", () => toggleSplitSkip());
+    splitContainer.appendChild(skipBtn);
+}
+
+function _persistSplit(value) {
+    if (!BUNDLE || CURRENT_IDX == null) return;
+    const root = BUNDLE.neuron.latest_root_id;
+    if (Array.isArray(value) && value.length === 0) {
+        // Empty → clear the field so the window is "undecided" again.
+        clearDecisionField(root, CURRENT_IDX, "split");
+    } else {
+        setDecisionField(root, CURRENT_IDX, "split", value);
+    }
+    if (notesInput.value) {
+        setDecisionField(root, CURRENT_IDX, "notes", notesInput.value);
+    }
+    const w = BUNDLE.windows.find(x => x.idx === CURRENT_IDX);
+    if (w) renderSplitButtons(w);
     renderWindows();
+}
+
+function toggleSplitCluster(lab) {
+    if (!BUNDLE || CURRENT_IDX == null) return;
+    const root = BUNDLE.neuron.latest_root_id;
+    const d = loadDecisions(root)[CURRENT_IDX] || {};
+    let arr;
+    // Picking a cluster cancels Skip and discards legacy yes/no.
+    if (Array.isArray(d.split)) arr = d.split.slice();
+    else arr = [];
+    const labStr = String(lab);
+    const i = arr.indexOf(labStr);
+    if (i >= 0) arr.splice(i, 1);
+    else arr.push(labStr);
+    arr.sort((a, b) => Number(a) - Number(b));
+    _persistSplit(arr);
+}
+
+function toggleSplitSkip() {
+    if (!BUNDLE || CURRENT_IDX == null) return;
+    const root = BUNDLE.neuron.latest_root_id;
+    const d = loadDecisions(root)[CURRENT_IDX] || {};
+    if (d.split === "skip") {
+        // Toggle off → clear (back to undecided).
+        _persistSplit([]);
+    } else {
+        // Skip overrides any cluster selection.
+        _persistSplit("skip");
+    }
 }
 
 function jumpRow(delta) {
@@ -542,8 +659,7 @@ hideDecided.addEventListener("change", renderWindows);
 
 mergeBtns.forEach(b =>
     b.addEventListener("click", () => applyMerge(b.dataset.v)));
-splitBtns.forEach(b =>
-    b.addEventListener("click", () => applySplit(b.dataset.v)));
+// split buttons are dynamic (per-window); wired in renderSplitButtons.
 nextBtn.addEventListener("click", goNextUndecided);
 const _backBtn = $("btn-back");
 // BACK is a plain "step one window back" — symmetric with the
@@ -569,10 +685,22 @@ document.addEventListener("keydown", (e) => {
     else if (k === "n") applyMerge("no");
     else if (k === "s") applyMerge("skip");
     else if (k === "u") applyMerge("unsure");
-    // Split verdict
-    else if (k === "1") applySplit("yes");
-    else if (k === "2") applySplit("no");
-    else if (k === "3") applySplit("skip");
+    // SPLIT WHICH? — digit keys toggle the per-window cluster
+    // buttons.  1 → cluster index 0, 2 → cluster index 1, etc.
+    // 0 toggles Skip.  Mapped against the buttons currently in
+    // the DOM so unused digits silently no-op.
+    else if (/^[0-9]$/.test(k)) {
+        if (k === "0") {
+            toggleSplitSkip();
+        } else {
+            const i = Number(k) - 1;
+            const btn = splitContainer.querySelector(
+                `.split-cluster-btn:nth-of-type(${i + 1})`);
+            if (btn && btn.dataset.cluster != null) {
+                toggleSplitCluster(Number(btn.dataset.cluster));
+            }
+        }
+    }
     // Navigation
     else if (k === "arrowright" || k === "enter") goNextUndecided();
     else if (k === "arrowleft") jumpRow(-1);     // BACK = step back

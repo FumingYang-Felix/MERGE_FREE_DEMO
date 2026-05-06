@@ -78,11 +78,10 @@
         </div>
       </div>
       <div class="decision-group">
-        <span class="dg-label" title="Does this cut split off at least one merge error correctly?">Split OK?</span>
+        <span class="dg-label" title="Pick which colored clusters should actually be split off (multi-select).  Skip = defer.">SPLIT WHICH?</span>
         <div id="split-buttons" class="dg-buttons">
-          <button data-v="yes"  class="v-yes">YES</button>
-          <button data-v="no"   class="v-no">NO</button>
-          <button data-v="skip" class="v-skip">Skip</button>
+          <!-- populated dynamically per window: one colored
+               button per cluster present in this window + Skip -->
         </div>
       </div>
       <input type="text" id="cur-notes" placeholder="notes (optional)">
@@ -127,26 +126,29 @@
           merge error in the underlying segmentation?
         </li>
         <li>
-          <b>Split OK?</b> — does the proposed cut (visualised as
-          same-coloured token clusters in the EM viewer, following
-          CAVE's split convention) correctly separate at least one
-          of the merging fragments?
+          <b>SPLIT WHICH?</b> — pick which colored token clusters in
+          the EM viewer should actually be split off.  Multi-select:
+          click each cluster button to toggle it on/off.  Pick
+          <b>Skip</b> to defer the decision.
         </li>
       </ol>
       <p>
-        Mark <b>Split = YES</b> whenever the recommended grouping —
-        if applied as a CAVE split — would correctly detach at least
-        one fragment, and <b>NO</b> if it would not yield a valid
-        separation.  Decisions persist in your browser's local storage
-        and can be downloaded as JSON via <b>Export decisions</b>
-        when you are finished.  We greatly appreciate your contribution!
+        For each suspect window, the system has already partitioned
+        its tokens into one or more colored clusters (visible as
+        soft ellipsoid blobs in the EM view).  Your job: decide
+        which of those clusters genuinely need to be split off as
+        separate segments.  Decisions persist in your browser's
+        local storage and can be downloaded as JSON via
+        <b>Export decisions</b> when you are finished.  We greatly
+        appreciate your contribution!
       </p>
       <p class="dim">
         <b>Keyboard:</b>
         <kbd>Y</kbd>/<kbd>N</kbd>/<kbd>S</kbd>/<kbd>U</kbd>
         — Real merge?;
-        <kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd>
-        — Split OK? (does this cut separate ≥1 merge error?);
+        <kbd>1</kbd>–<kbd>4</kbd>
+        — toggle that-numbered cluster (in SPLIT WHICH);
+        <kbd>0</kbd> — toggle Skip;
         <kbd>→</kbd>/<kbd>Enter</kbd> — next undecided;
         <kbd>←</kbd> — step back one window;
         <kbd>↑</kbd>/<kbd>↓</kbd> or <kbd>j</kbd>/<kbd>k</kbd> — adjacent navigation.
