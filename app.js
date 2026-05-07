@@ -625,11 +625,36 @@ function openCaveWarmup() {
 const _warmupBtn = $("btn-warmup");
 if (_warmupBtn) _warmupBtn.addEventListener("click", openCaveWarmup);
 
+// Read a File as text, transparently gunzip-ing if the filename
+// ends with .gz / .json.gz.  Hugging Face serves small files with
+// Content-Disposition: inline so plain .json links render in the
+// browser instead of downloading; the workaround is to publish
+// .json.gz instead (always downloads), and have the import handler
+// decompress in-browser via the standard DecompressionStream API.
+async function _readBundleFile(f) {
+    const isGz = /\.gz(?:ip)?$/i.test(f.name)
+                 || f.type === "application/gzip"
+                 || f.type === "application/x-gzip";
+    if (!isGz) return f.text();
+    if (typeof DecompressionStream === "undefined") {
+        throw new Error("This browser cannot decompress .gz files "
+                         + "(needs DecompressionStream).  Please "
+                         + "use Chrome/Edge/Firefox 113+/Safari 16.4+.");
+    }
+    const stream = f.stream().pipeThrough(new DecompressionStream("gzip"));
+    return new Response(stream).text();
+}
+
 $("btn-import").addEventListener("click", () => importInput.click());
-importInput.addEventListener("change", (e) => {
+importInput.addEventListener("change", async (e) => {
     const f = e.target.files[0];
     if (!f) return;
-    f.text().then(t => importBundleFromText(t, f.name));
+    try {
+        const t = await _readBundleFile(f);
+        importBundleFromText(t, f.name);
+    } catch (err) {
+        alert("Could not read bundle: " + err.message);
+    }
     importInput.value = "";
 });
 const _welImport = $("btn-welcome-import");
