@@ -173,6 +173,14 @@ header .meta {
     opacity: 1.0; border-color: #fff;
     box-shadow: 0 0 0 2px rgba(255,255,255,0.35);
 }
+.dg-buttons button.create-split-btn {
+    background: #1f5f4f;
+    border-color: #2f9078;
+    color: #f3fffb;
+}
+.dg-buttons button.create-split-btn:hover {
+    background: #287663;
+}
 #cur-notes {
     background: #222; color: #eee; border: 1px solid #444;
     padding: 6px; border-radius: 4px;

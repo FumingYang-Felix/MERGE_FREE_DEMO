@@ -13,6 +13,16 @@
 const SPELUNKER = "https://spelunker.cave-explorer.org/";
 const UM_TO_VOXEL_X = 250.0;     // 4 nm xy → 1 voxel = 4nm; 1 µm = 250 vox
 const UM_TO_VOXEL_Z = 25.0;      // 40 nm z → 1 voxel = 40nm; 1 µm = 25 vox
+const VIEWER_DIMENSIONS = {
+    x: [4e-9, "m"],
+    y: [4e-9, "m"],
+    z: [4e-8, "m"],
+};
+const MICRON_DIMENSIONS = {
+    x: [1e-6, "m"],
+    y: [1e-6, "m"],
+    z: [1e-6, "m"],
+};
 // Cluster colour palette (max ~7 clusters in practice).
 // Deliberately avoids red and blue families so the dots stay
 // distinguishable from the underlying segmentation meshes
@@ -120,11 +130,207 @@ function clearDecisionField(root, idx, field) {
     saveDecisions(root, all);
 }
 
+function normalizeSplitSelection(splitV) {
+    if (splitV === "yes" || splitV === "no" || splitV === "skip") {
+        return splitV;
+    }
+    if (!Array.isArray(splitV)) return [];
+    return Array.from(new Set(splitV.map(String)))
+        .sort((a, b) => Number(a) - Number(b));
+}
+
+function getSelectedSplitLabels(win, splitV) {
+    if (!win || !win.tokens || !Array.isArray(win.tokens.labels)) return [];
+    const selected = normalizeSplitSelection(splitV);
+    if (!Array.isArray(selected)) return [];
+    const present = new Set(win.tokens.labels.map((lab) => String(lab)));
+    return selected.filter((lab) => present.has(String(lab)))
+        .map(Number)
+        .sort((a, b) => a - b);
+}
+
+function makeAbsoluteTokenPointUm(centerUm, relPosUm) {
+    return [
+        centerUm[0] + relPosUm[0],
+        centerUm[1] + relPosUm[1],
+        centerUm[2] + relPosUm[2],
+    ];
+}
+
+function makeAbsoluteTokenPointViewer(centerUm, relPosUm) {
+    return [
+        (centerUm[0] + relPosUm[0]) * UM_TO_VOXEL_X,
+        (centerUm[1] + relPosUm[1]) * UM_TO_VOXEL_X,
+        (centerUm[2] + relPosUm[2]) * UM_TO_VOXEL_Z,
+    ];
+}
+
+function makeIdentityTransformRows() {
+    return [
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0],
+    ];
+}
+
+function getLabelAnnotationLayerTransform() {
+    return {
+        inputDimensions: MICRON_DIMENSIONS,
+        outputDimensions: VIEWER_DIMENSIONS,
+        matrix: [
+            [UM_TO_VOXEL_X, 0, 0, 0],
+            [0, UM_TO_VOXEL_X, 0, 0],
+            [0, 0, UM_TO_VOXEL_Z, 0],
+        ],
+    };
+}
+
+function getSegmentationLayerTransform() {
+    return {
+        inputDimensions: VIEWER_DIMENSIONS,
+        outputDimensions: VIEWER_DIMENSIONS,
+        matrix: makeIdentityTransformRows(),
+    };
+}
+
+function applyAffineTransform(point, rows) {
+    return rows.map((row) =>
+        row[0] * point[0] + row[1] * point[1] + row[2] * point[2] + row[3]);
+}
+
+function invertAffineTransformRows(rows) {
+    const a = rows[0][0], b = rows[0][1], c = rows[0][2], tx = rows[0][3];
+    const d = rows[1][0], e = rows[1][1], f = rows[1][2], ty = rows[1][3];
+    const g = rows[2][0], h = rows[2][1], i = rows[2][2], tz = rows[2][3];
+    const det = a * (e * i - f * h)
+              - b * (d * i - f * g)
+              + c * (d * h - e * g);
+    if (!Number.isFinite(det) || Math.abs(det) < 1e-12) {
+        throw new Error("Layer transform is singular");
+    }
+    const invDet = 1 / det;
+    const inv = [
+        [(e * i - f * h) * invDet,
+         (c * h - b * i) * invDet,
+         (b * f - c * e) * invDet,
+         0],
+        [(f * g - d * i) * invDet,
+         (a * i - c * g) * invDet,
+         (c * d - a * f) * invDet,
+         0],
+        [(d * h - e * g) * invDet,
+         (b * g - a * h) * invDet,
+         (a * e - b * d) * invDet,
+         0],
+    ];
+    const invTranslation = applyAffineTransform([-tx, -ty, -tz], inv);
+    inv[0][3] = invTranslation[0];
+    inv[1][3] = invTranslation[1];
+    inv[2][3] = invTranslation[2];
+    return inv;
+}
+
+function mapPointBetweenLayerTransforms(point, fromTransform, toTransform) {
+    const viewerPoint = applyAffineTransform(point, fromTransform.matrix
+        || makeIdentityTransformRows());
+    const toInverse = invertAffineTransformRows(toTransform.matrix
+        || makeIdentityTransformRows());
+    return applyAffineTransform(viewerPoint, toInverse);
+}
+
+function makeSegmentationTokenPoint(centerUm, relPosUm) {
+    const labelPoint = makeAbsoluteTokenPointUm(centerUm, relPosUm);
+    return labelPoint;
+    // return mapPointBetweenLayerTransforms(
+    //     labelPoint,
+    //     getLabelAnnotationLayerTransform(),
+    //     getSegmentationLayerTransform(),
+    // );
+}
+
+function buildClusterAnnotationLayers(window_) {
+    if (!window_ || !window_.tokens || !Array.isArray(window_.tokens.labels)
+            || !Array.isArray(window_.tokens.pos_rel_um)) {
+        return [];
+    }
+    const positions = window_.tokens.pos_rel_um;
+    const labels = window_.tokens.labels;
+    const byCluster = {};
+    for (let i = 0; i < positions.length; i++) {
+        const lab = labels[i];
+        if (!byCluster[lab]) byCluster[lab] = [];
+        const p = positions[i];
+        byCluster[lab].push({
+            pt: makeAbsoluteTokenPointViewer(window_.center_um, p),
+            desc: `T${i} cluster=${lab}`,
+        });
+    }
+    return Object.keys(byCluster).sort((a, b) => Number(a) - Number(b))
+        .map((lab) => {
+            const color = CLUSTER_COLORS[Number(lab) % CLUSTER_COLORS.length];
+            return {
+                type: "annotation",
+                source: "local://annotations",
+                tab: "annotations",
+                annotationColor: color,
+                annotationFillOpacity: 0.35,
+                annotations: byCluster[lab].map((a, i) => ({
+                    type: "ellipsoid",
+                    center: a.pt,
+                    radii: [50, 50, 5],
+                    id: `c${lab}_t${i}`,
+                    description: a.desc,
+                })),
+                name: `cluster-${lab}`,
+            };
+        });
+}
+
+function buildGrapheneMulticutState(multicutLabels, layers) {
+    if (!Array.isArray(multicutLabels) || multicutLabels.length !== 2) {
+        return null;
+    }
+    const rootId = String(BUNDLE.neuron.latest_root_id);
+    const [sinkLabel, sourceLabel] = multicutLabels.map(Number);
+    const toMulticutPosition = (center) => [center[0] / 2, center[1] / 2, center[2]];
+    const makeSelections = (label) => {
+        const layer = layers.find((candidate) =>
+            candidate && candidate.type === "annotation"
+            && candidate.name === `cluster-${label}`);
+        if (!layer || !Array.isArray(layer.annotations)) return [];
+        return layer.annotations
+            .map((annotation) => annotation && annotation.center)
+            .filter(Array.isArray)
+            .map((center) => ({
+                rootId,
+                segmentId: rootId,
+                position: toMulticutPosition(center),
+            }));
+    };
+    const sinks = makeSelections(sinkLabel);
+    const sources = makeSelections(sourceLabel);
+
+    if (!sinks.length || !sources.length) return null;
+    return {
+        multicut: {
+            focusSegment: rootId,
+            sinks,
+            sources,
+        },
+    };
+}
+
 // ──────────────────────────── spelunker state builder ───────────────
-function buildSpelunkerUrl(window_) {
+function buildSpelunkerUrl(window_, options = {}) {
     const n = BUNDLE.neuron;
     const c = window_.center_um;
     const datastack = n.datastack || "minnie65_public";
+    const clusterLayers = buildClusterAnnotationLayers(window_);
+    const graphUrl = ("graphene://middleauth+https://minnie.microns-daf"
+        + ".com/segmentation/table/" + datastack);
+    const skeletonUrl = ("precomputed://middleauth+https://minnie.microns"
+        + "-daf.com/skeletoncache/api/v1/" + datastack
+        + "/precomputed/skeleton/");
 
     // Build the segments list: latest root in blue + every old root
     // in red.  Old roots come from `old_root_ids` (preferred) or the
@@ -158,62 +364,36 @@ function buildSpelunkerUrl(window_) {
         {
             type: "segmentation",
             source: [
-                ("graphene://middleauth+https://minnie.microns-daf"
-                 + ".com/segmentation/table/" + datastack),
-                ("precomputed://middleauth+https://minnie.microns"
-                 + "-daf.com/skeletoncache/api/v1/" + datastack
-                 + "/precomputed/skeleton/"),
+                graphUrl,
+                skeletonUrl,
             ],
             tab: "source",
             segments: segs,
             segmentColors: segColors,
+            toolBindings: undefined,
             name: "segmentation",
         },
     ];
+    layers.push(...clusterLayers);
 
-    if (window_.tokens && window_.tokens.pos_rel_um
-            && window_.tokens.labels) {
-        const positions = window_.tokens.pos_rel_um;
-        const labels = window_.tokens.labels;
-        const byCluster = {};
-        for (let i = 0; i < positions.length; i++) {
-            const lab = labels[i];
-            if (!byCluster[lab]) byCluster[lab] = [];
-            const p = positions[i];
-            byCluster[lab].push({
-                pt: [(c[0] + p[0]) * UM_TO_VOXEL_X,
-                     (c[1] + p[1]) * UM_TO_VOXEL_X,
-                     (c[2] + p[2]) * UM_TO_VOXEL_Z],
-                desc: `T${i} cluster=${lab}`,
-            });
-        }
-        // Use ELLIPSOID annotations (200 nm radius spheres ≈ 50 voxels
-        // xy / 5 voxels z) so the cluster overlay reads as bigger
-        // soft blobs on top of the EM image, with reduced fill
-        // opacity so the underlying segmentation remains visible.
-        Object.keys(byCluster).sort((a, b) => Number(a) - Number(b))
-              .forEach((lab) => {
-            const color = CLUSTER_COLORS[Number(lab) % CLUSTER_COLORS.length];
-            layers.push({
-                type: "annotation",
-                source: "local://annotations",
-                tab: "annotations",
-                annotationColor: color,
-                annotationFillOpacity: 0.35,
-                annotations: byCluster[lab].map((a, i) => ({
-                    type: "ellipsoid",
-                    center: a.pt,
-                    radii: [50, 50, 5],
-                    id: `c${lab}_t${i}`,
-                    description: a.desc,
-                })),
-                name: `cluster-${lab}`,
-            });
-        });
+    const graphState = buildGrapheneMulticutState(
+        options.multicutLabels,
+        layers,
+    );
+    const segmentationLayer = layers.find((layer) =>
+        layer && layer.type === "segmentation" && layer.name === "segmentation");
+    if (segmentationLayer) {
+        segmentationLayer.source = [
+            graphState ? { url: graphUrl, state: graphState } : graphUrl,
+            skeletonUrl,
+        ];
+        segmentationLayer.toolBindings = graphState
+            ? { M: "grapheneMulticutSegments" }
+            : undefined;
     }
 
     const state = {
-        dimensions: { x: [4e-9, "m"], y: [4e-9, "m"], z: [4e-8, "m"] },
+        dimensions: VIEWER_DIMENSIONS,
         position: [c[0] * UM_TO_VOXEL_X,
                    c[1] * UM_TO_VOXEL_X,
                    c[2] * UM_TO_VOXEL_Z],
@@ -224,6 +404,24 @@ function buildSpelunkerUrl(window_) {
         layout: "xy-3d",
     };
     return SPELUNKER + "#!" + encodeURIComponent(JSON.stringify(state));
+}
+
+function showWindowInSpelunker(window_, options = {}) {
+    const url = buildSpelunkerUrl(window_, options);
+    const forceReload = options.forceReload === true;
+    if (iframe.src === url || forceReload) {
+        iframe.src = "about:blank";
+    }
+    if (options.multicutLabels) {
+        iframe.addEventListener("load", () => iframe.focus(), { once: true });
+    }
+    if (forceReload) {
+        requestAnimationFrame(() => {
+            iframe.src = url;
+        });
+        return;
+    }
+    iframe.src = url;
 }
 
 // ──────────────────────────── rendering ─────────────────────────────
@@ -323,7 +521,7 @@ function selectWindow(idx) {
         + `  prob=${w.verify_prob == null ? "—" : w.verify_prob.toFixed(3)}`
         + `  ${w.is_suspect ? "SUSPECT" : "non-suspect"}`
         + (has_tokens ? sp_str : "  (no token affinity)");
-    iframe.src = buildSpelunkerUrl(w);
+    showWindowInSpelunker(w);
 
     // Reflect existing decision
     const root = BUNDLE.neuron.latest_root_id;
@@ -381,7 +579,7 @@ function renderSplitButtons(win) {
     if (splitV === "yes" || splitV === "no") splitV = [];
     const isSkip = splitV === "skip";
     const selSet = (Array.isArray(splitV))
-                 ? new Set(splitV.map(String)) : new Set();
+                 ? new Set(normalizeSplitSelection(splitV)) : new Set();
 
     const uniqLabels = Array.from(new Set(win.tokens.labels))
                             .map(Number)
@@ -399,6 +597,26 @@ function renderSplitButtons(win) {
         btn.addEventListener("click", () => toggleSplitCluster(lab));
         splitContainer.appendChild(btn);
     });
+
+    const selectedLabels = getSelectedSplitLabels(win, splitV);
+    if (!isSkip && selectedLabels.length === 2) {
+        const [sinkLabel, sourceLabel] = selectedLabels;
+        const splitBtn = document.createElement("button");
+        splitBtn.className = "create-split-btn";
+        splitBtn.textContent = "Create split";
+        splitBtn.title = "Open multicut with C" + sinkLabel
+            + " as sinks (red) and C" + sourceLabel
+            + " as sources (blue). Press M in Spelunker to activate it.";
+        splitBtn.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            showWindowInSpelunker(win, {
+                multicutLabels: selectedLabels,
+                forceReload: true,
+            });
+        });
+        splitContainer.appendChild(splitBtn);
+    }
 
     const skipBtn = document.createElement("button");
     skipBtn.className = "v-skip" + (isSkip ? " active" : "");
